@@ -137,7 +137,30 @@ internal class HabitDatabase : IDisposable
         string updateHabitQuery = $"UPDATE habits SET name = '{newHabitName}', unit = '{newUnit}' WHERE name = '{oldHabitName}';";
         using var updateHabitCommand = new SqliteCommand(updateHabitQuery, _connection);
         updateHabitCommand.ExecuteNonQuery();
+        if (oldHabitName == newHabitName)
+        {
+            return true;
+        }
+
+        string updateHabitTableQuery = $"ALTER TABLE {oldHabitName} RENAME TO {newHabitName};";
+        using var updateHabitTableCommand = new SqliteCommand(updateHabitTableQuery, _connection);
+        updateHabitTableCommand.ExecuteNonQuery();
         return true;
+    }
+
+    public bool UpdateLoggedHabit(string habitName, int id, int newQuantity)
+    {
+        string selectQuery = $"SELECT COUNT(*) FROM habits WHERE name = '{habitName}';";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        int habitCount = Convert.ToInt32(selectCommand.ExecuteScalar());
+        if (habitCount == 0)
+        {
+            return false;
+        }
+
+        string updateHabitQuery = $"UPDATE {habitName} SET quantity = {newQuantity} WHERE id = {id};";
+        using var updateHabitCommand = new SqliteCommand(updateHabitQuery, _connection);
+        return updateHabitCommand.ExecuteNonQuery() > 0;
     }
 
     public List<(string habitName, string unit)> GetAllHabits()
@@ -179,7 +202,7 @@ internal class HabitDatabase : IDisposable
         return ret;
     }
 
-    public List<(int id, int quantity, string timeStamp)>? GetHabit(string habitName, out string unit)
+    public List<(int id, int quantity, string timeStamp)>? GetHabitLogs(string habitName, out string unit)
     {
         string selectHabitQuery = $"SELECT unit FROM habits WHERE name = '{habitName}';";
         using var selectHabitCommand = new SqliteCommand(selectHabitQuery, _connection);
