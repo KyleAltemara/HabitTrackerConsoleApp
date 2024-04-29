@@ -1,299 +1,225 @@
-﻿namespace HabitTrackerConsoleApp;
+﻿using System.Text;
+using Spectre.Console;
+using Spectre.Console.Cli;
+
+namespace HabitTrackerConsoleApp;
 
 internal class Program
 {
     static void Main()
     {
         using var habitDatabase = new HabitDatabase("habit_tracker.db");
-        int choice;
-        do
+        var menu = new SelectionPrompt<string>()
+        .Title("[bold]Habit Tracker Menu[/]")
+        .AddChoices([
+            "Exit",
+            "Add New Habit",
+            "Log Habit",
+            "Delete Habit",
+            "Delete Logged Habit",
+            "Update Habit",
+            "View All Habits",
+            "View Habit",
+            "Report Number of Times",
+            "Report Total Quantity",
+        ]);
+
+        while (true)
         {
-            Console.WriteLine("Habit Tracker Menu");
-            Console.WriteLine("1. Insert a habit");
-            Console.WriteLine("2. Delete a habit");
-            Console.WriteLine("3. Update a habit");
-            Console.WriteLine("4. View all habits");
-            Console.WriteLine("5. Generate report");
-            Console.WriteLine("0. Exit");
-
-            Console.Write("Enter your choice: ");
-            if (!int.TryParse(Console.ReadLine(), out choice))
-            {
-                Console.Clear();
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Invalid choice {choice}. Please try again.");
-                Console.ResetColor();
-                continue;
-            }
-            else
-            {
-                switch (choice)
-                {
-                    case 1:
-                        InsertHabit(habitDatabase);
-                        break;
-                    case 2:
-                        DeleteHabit(habitDatabase);
-                        break;
-                    case 3:
-                        UpdateHabit(habitDatabase);
-                        break;
-                    case 4:
-                        habitDatabase.ViewAllHabits();
-                        break;
-                    case 5:
-                        GenerateReport(habitDatabase);
-                        break;
-                    case 0:
-                        Console.WriteLine("Exiting...");
-                        break;
-                    default:
-                        Console.Clear();
-                        Console.BackgroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Invalid choice {choice}. Please try again.");
-                        Console.ResetColor();
-                        break;
-                }
-            }
-
-        } while (choice != 0);
-    }
-
-    static void InsertHabit(HabitDatabase habitDatabase)
-    {
-        string name = string.Empty;
-        while (string.IsNullOrEmpty(name))
-        {
-            Console.Write("Enter the habit name: ");
-            var line = Console.ReadLine();
-            if (string.IsNullOrEmpty(line))
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid name. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                name = line;
-            }
-        }
-
-        int quantity = -1;
-        while (quantity < 0)
-        {
-            Console.Write("Enter the habit quantity: ");
-            if (!int.TryParse(Console.ReadLine(), out int line) || line < 0)
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid quantity. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                quantity = line;
-            }
-        }
-
-        string unit = string.Empty;
-        while (string.IsNullOrEmpty(unit))
-        {
-            Console.Write("Enter the unit of measurement: ");
-            var line = Console.ReadLine();
-            if (string.IsNullOrEmpty(line))
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid unit. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                unit = line;
-            }
-        }
-
-        habitDatabase.InsertHabit(name, quantity, unit);
-        Console.WriteLine("Habit inserted successfully.");
-    }
-
-    static void DeleteHabit(HabitDatabase habitDatabase)
-    {
-        int id = -1;
-        while (id < 0)
-        {
-            Console.Write("Enter the habit ID to delete: ");
-            if (!int.TryParse(Console.ReadLine(), out int line) || line < 0)
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid ID. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                id = line;
-            }
-        }
-
-        if (habitDatabase.DeleteHabit(id))
-        {
-            Console.WriteLine("Habit deleted successfully.");
-        }
-        else
-        {
-            Console.WriteLine("Habit not found.");
-        }
-    }
-
-    static void UpdateHabit(HabitDatabase habitDatabase)
-    {
-        int id = -1;
-        while (id < 0)
-        {
-            Console.Write("Enter the habit ID to update: ");
-            if (!int.TryParse(Console.ReadLine(), out int line) || line < 0)
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid ID. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                id = line;
-            }
-        }
-
-        string name = string.Empty;
-        while (string.IsNullOrEmpty(name))
-        {
-            Console.Write("Enter the habit name: ");
-            var line = Console.ReadLine();
-            if (string.IsNullOrEmpty(line))
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid name. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                name = line;
-            }
-        }
-
-        int quantity = -1;
-        while (quantity < 0)
-        {
-            Console.Write("Enter the habit quantity: ");
-            if (!int.TryParse(Console.ReadLine(), out int line) || line < 0)
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid quantity. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                quantity = line;
-            }
-        }
-
-        string unit = string.Empty;
-        while (string.IsNullOrEmpty(unit))
-        {
-            Console.Write("Enter the unit of measurement: ");
-            var line = Console.ReadLine();
-            if (string.IsNullOrEmpty(line))
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid unit. Please try again.");
-                Console.ResetColor();
-            }
-            else
-            {
-                unit = line;
-            }
-        }
-
-        if (habitDatabase.UpdateHabit(id, name, quantity, unit))
-        {
-            Console.WriteLine("Habit updated successfully.");
-        }
-        else
-        {
-            Console.WriteLine("Habit not found.");
-        }
-    }
-
-    static void GenerateReport(HabitDatabase habitDatabase)
-    {
-        int choice;
-        Console.Clear();
-        do
-        {
-            Console.WriteLine("Report Menu");
-            Console.WriteLine("1. Number of times a habit was performed");
-            Console.WriteLine("2. Total quantity of a habit");
-            Console.WriteLine("0. Back to main menu");
-
-            Console.Write("Enter your choice: ");
-            while (!int.TryParse(Console.ReadLine(), out choice))
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid choice. Please try again.");
-                Console.ResetColor();
-                continue;
-            }
-
-            int id;
+            string choice = AnsiConsole.Prompt(menu);
             switch (choice)
             {
-                case 1:
-                    id = -1;
-                    while (id < 0)
-                    {
-                        Console.Write("Enter the habit ID: ");
-                        if (!int.TryParse(Console.ReadLine(), out int line) || line < 0)
-                        {
-                            Console.BackgroundColor = ConsoleColor.Red;
-                            Console.WriteLine("Invalid ID. Please try again.");
-                            Console.ResetColor();
-                        }
-                        else
-                        {
-                            id = line;
-                        }
-                    }
-
-                    int count = habitDatabase.ReportNumberOfTimes(id);
-                    Console.WriteLine($"The habit was performed {count} times.");
+                case "Exit":
+                    return;
+                case "Add New Habit":
+                    AddNewHabit(habitDatabase);
                     break;
-                case 2:
-                    id = -1;
-                    while (id < 0)
-                    {
-                        Console.Write("Enter the habit ID: ");
-                        if (!int.TryParse(Console.ReadLine(), out int line) || line < 0)
-                        {
-                            Console.BackgroundColor = ConsoleColor.Red;
-                            Console.WriteLine("Invalid ID. Please try again.");
-                            Console.ResetColor();
-                        }
-                        else
-                        {
-                            id = line;
-                        }
-                    }
-
-                    int totalQuantity = habitDatabase.ReportTotalQuantity(id);
-                    Console.WriteLine($"The total quantity of the habit is {totalQuantity}.");
+                case "Log Habit":
+                    LogHabit(habitDatabase);
                     break;
-                case 0:
+                case "Delete Habit":
+                    DeleteHabit(habitDatabase);
                     break;
-                default:
-                    Console.Clear();
-                    Console.BackgroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    Console.ResetColor();
+                case "Delete Logged Habit":
+                    DeleteLoggedHabit(habitDatabase);
+                    break;
+                case "Update Habit":
+                    UpdateHabit(habitDatabase);
+                    break;
+                case "View All Habits":
+                    ViewAllHabits(habitDatabase);
+                    break;
+                case "View Habit":
+                    ViewHabit(habitDatabase);
+                    break;
+                case "Report Number of Times":
+                    ReportNumberOfTimes(habitDatabase);
+                    break;
+                case "Report Total Quantity":
+                    ReportTotalQuantity(habitDatabase);
                     break;
             }
-        } while (choice != 0);
-        Console.Clear();
+        }
+    }
+
+    private static void AddNewHabit(HabitDatabase habitDatabase)
+    {
+        var habits = habitDatabase.GetAllHabits();
+        var builder = new StringBuilder();
+        builder.AppendLine("Existing habits:");
+        builder.AppendLine("Habit - Unit");
+        foreach (var habit in habits)
+        {
+            builder.AppendLine($"{habit.habitName} - {habit.unit}");
+        }
+
+        builder.AppendLine("Enter the name of the new habit (or enter to return to main menu):");
+        var habitName = AnsiConsole.Prompt(new TextPrompt<string>(builder.ToString()).AllowEmpty());
+        if (string.IsNullOrEmpty(habitName))
+        {
+            return;
+        }
+
+        var habitUnit = AnsiConsole.Prompt(new TextPrompt<string>("Enter the units of the new habit (or enter to return to main menu):").AllowEmpty());
+        if (string.IsNullOrEmpty(habitUnit))
+        {
+            return;
+        }
+
+        if (habitDatabase.AddNewHabit(habitName, habitUnit))
+        {
+            AnsiConsole.MarkupLine("[bold]New habit added successfully![/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[bold red]Failed to add new habit![/]");
+        }
+    }
+
+    private static void LogHabit(HabitDatabase habitDatabase)
+    {
+        var habits = habitDatabase.GetAllHabits();
+        if (habits.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[bold red]No habits to log![/]");
+            return;
+        }
+
+        var habitNames = habits.Select(habit => habit.habitName).ToList();
+        habitNames.Add("Return to main menu");
+        var menu = new SelectionPrompt<string>().AddChoices(habitNames);
+        var habitName = AnsiConsole.Prompt(menu);
+        if (habitName == "Return to main menu")
+        {
+            return;
+        }
+
+        var habitQuantity = AnsiConsole.Ask<int>($"Enter the {habits.Single(h => h.habitName == habitName).unit} of {habitName} to log:");
+        if (habitQuantity == 0)
+        {
+            AnsiConsole.MarkupLine("[bold red]Failed to log habit![/]");
+            return;
+        }
+
+        if (habitDatabase.LogHabit(habitName, habitQuantity))
+        {
+            AnsiConsole.MarkupLine("[bold]Habit logged successfully![/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[bold red]Failed to log habit![/]");
+        }
+    }
+
+    private static void DeleteHabit(HabitDatabase habitDatabase)
+    {
+        var habits = habitDatabase.GetAllHabits();
+        if (habits.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[bold red]No habits to delete![/]");
+            return;
+        }
+
+        var habitNames = habits.Select(habit => habit.habitName).ToList();
+        habitNames.Add("Return to main menu");
+        var menu = new SelectionPrompt<string>().AddChoices(habitNames);
+        var habitName = AnsiConsole.Prompt(menu);
+        if (habitName == "Return to main menu")
+        {
+            return;
+        }
+
+        if (habitDatabase.DeleteHabitTable(habitName))
+        {
+            AnsiConsole.MarkupLine("[bold]Habit deleted successfully![/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[bold red]Failed to delete habit![/]");
+        }
+    }
+
+    private static void DeleteLoggedHabit(HabitDatabase habitDatabase)
+    {
+        var habitsAndLogs = habitDatabase.GetAllHabitsAndLogs();
+        if (habitsAndLogs.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[bold red]No logged habits to delete![/]");
+            return;
+        }
+
+        var habitNames = habitsAndLogs.Select(kvp => kvp.Key.habitName).ToList();
+        habitNames.Add("Return to main menu");
+        var menu = new SelectionPrompt<string>().AddChoices(habitNames);
+        var habitName = AnsiConsole.Prompt(menu);
+        if (habitName == "Return to main menu")
+        {
+            return;
+        }
+
+        var habitLogs = habitsAndLogs.Single(kvp => kvp.Key.habitName == habitName).Value;
+        if (habitLogs.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[bold red]No logged habits to delete![/]");
+            return;
+        }
+
+        var habitLogStrings = habitLogs.Select(log => $"ID: {log.id}, Quantity: {log.quantity}, Timestamp: {log.timeStamp}").ToList();
+        menu = new SelectionPrompt<string>().AddChoices(habitLogStrings);
+        var habitLogString = AnsiConsole.Prompt(menu);
+        var habitId = habitLogs.Single(log => $"ID: {log.id}, Quantity: {log.quantity}, Timestamp: {log.timeStamp}" == habitLogString).id;
+        if (habitDatabase.DeleteLoggedHabit(habitName, habitId))
+        {
+            AnsiConsole.MarkupLine("[bold]Logged habit deleted successfully![/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[bold red]Failed to delete logged habit![/]");
+        }
+    }
+
+    private static void UpdateHabit(HabitDatabase habitDatabase)
+    {
+        // Implement the logic for updating a habit here
+    }
+
+    private static void ViewAllHabits(HabitDatabase habitDatabase)
+    {
+        // Implement the logic for viewing all habits here
+    }
+
+    private static void ViewHabit(HabitDatabase habitDatabase)
+    {
+        // Implement the logic for viewing a specific habit here
+    }
+
+    private static void ReportNumberOfTimes(HabitDatabase habitDatabase)
+    {
+        // Implement the logic for reporting the number of times here
+    }
+
+    private static void ReportTotalQuantity(HabitDatabase habitDatabase)
+    {
+        // Implement the logic for reporting the total quantity here
     }
 }

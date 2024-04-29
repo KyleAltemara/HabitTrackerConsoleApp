@@ -23,87 +23,191 @@ internal class HabitDatabase : IDisposable
 
     private void CreateHabitsTable()
     {
-        // Create the Habits table if it does not exist
-        // The Id column is the primary key and is auto-incremented
-        using var command = new SqliteCommand("CREATE TABLE IF NOT EXISTS Habits (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Quantity INTEGER, Unit TEXT)", _connection);
+        string createTableQuery = @"CREATE TABLE IF NOT EXISTS habits (name TEXT PRIMARY KEY,unit TEXT);";
+        using var command = new SqliteCommand(createTableQuery, _connection);
         command.ExecuteNonQuery();
     }
 
-    public void InsertHabit(string name, int quantity, string unit)
+    public bool AddNewHabit(string habitName, string unit)
     {
-        // Insert a new habit into the Habits table
-        // The Id column is not specified because it is auto-incremented
-        // The @Name, @Quantity, and @Unit are placeholders for the actual values
-        using var command = new SqliteCommand("INSERT INTO Habits (Name, Quantity, Unit) VALUES (@Name, @Quantity, @Unit)", _connection);
-        // The AddWithValue method is used to add the actual values to the placeholders
-        command.Parameters.AddWithValue("@Name", name);
-        command.Parameters.AddWithValue("@Quantity", quantity);
-        command.Parameters.AddWithValue("@Unit", unit);
-        // The ExecuteNonQuery method is used to execute the command
-        // It returns the number of rows affected by the command
-        command.ExecuteNonQuery();
+        string selectQuery = $"SELECT COUNT(*) FROM habits WHERE name = '{habitName}';";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        int habitCount = Convert.ToInt32(selectCommand.ExecuteScalar());
+
+        if (habitCount == 0)
+        {
+            // Create the habit table using the name
+            string createHabitTableQuery = $"CREATE TABLE IF NOT EXISTS {habitName} (id INTEGER PRIMARY KEY AUTOINCREMENT, quantity INTEGER, timestamp TEXT);";
+            using var createHabitTableCommand = new SqliteCommand(createHabitTableQuery, _connection);
+            createHabitTableCommand.ExecuteNonQuery();
+
+            // Insert the habit into the habits table
+            string insertHabitQuery = $"INSERT INTO habits (name, unit) VALUES ('{habitName}', '{unit}');";
+            using var insertHabitCommand = new SqliteCommand(insertHabitQuery, _connection);
+            insertHabitCommand.ExecuteNonQuery();
+        }
+
+        return habitCount == 0;
     }
 
-    public bool DeleteHabit(int id)
+    public bool LogHabit(string habitName, int quantity)
     {
-        // DELETE will remove the habit with the specified Id
-        // if the habit is found, the number of rows affected will be greater than 0
-        // otherwise, the habit was not found and the number of rows affected will be 0
-        using var command = new SqliteCommand("DELETE FROM Habits WHERE Id = @Id", _connection);
-        command.Parameters.AddWithValue("@Id", id);
-        int rowsAffected = command.ExecuteNonQuery();
-        return rowsAffected > 0;
+        var timestamp = DateTime.Now;
+        // Check if the habit already exists in the habits table
+        string selectQuery = $"SELECT COUNT(*) FROM habits WHERE name = '{habitName}';";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        int habitCount = Convert.ToInt32(selectCommand.ExecuteScalar());
+
+        if (habitCount == 0)
+        {
+            return false;
+        }
+
+        // Add the habit to the new table
+        string addHabitQuery = $"INSERT INTO {habitName} (quantity, timestamp) VALUES ({quantity}, '{timestamp:yyyy-MM-dd HH:mm:ss}');";
+        using var addHabitCommand = new SqliteCommand(addHabitQuery, _connection);
+        addHabitCommand.ExecuteNonQuery();
+        return true;
     }
 
-    public bool UpdateHabit(int id, string name, int quantity, string unit)
+    public bool DeleteHabitTable(string habitName)
     {
-        // UPDATE will modify the habit with the specified Id
-        // if the habit is found, the number of rows affected will be greater than 0
-        // otherwise, the habit was not found and the number of rows affected will be 0
-        using var command = new SqliteCommand("UPDATE Habits SET Name = @Name, Quantity = @Quantity, Unit = @Unit WHERE Id = @Id", _connection);
-        command.Parameters.AddWithValue("@Name", name);
-        command.Parameters.AddWithValue("@Quantity", quantity);
-        command.Parameters.AddWithValue("@Unit", unit);
-        command.Parameters.AddWithValue("@Id", id);
-        int rowsAffected = command.ExecuteNonQuery();
-        return rowsAffected > 0;
+
+        string selectQuery = $"SELECT COUNT(*) FROM habits WHERE name = '{habitName}';";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        int habitCount = Convert.ToInt32(selectCommand.ExecuteScalar());
+
+        if (habitCount == 0)
+        {
+            return false;
+        }
+
+        // Delete the habit from the habits table
+        string deleteHabitQuery = $"DELETE FROM habits WHERE name = '{habitName}';";
+        using var deleteHabitCommand = new SqliteCommand(deleteHabitQuery, _connection);
+        deleteHabitCommand.ExecuteNonQuery();
+        // Delete the habit table
+        string deleteHabitTableQuery = $"DROP TABLE {habitName};";
+        using var deleteHabitTableCommand = new SqliteCommand(deleteHabitTableQuery, _connection);
+        deleteHabitTableCommand.ExecuteNonQuery();
+        return true;
     }
 
-    public void ViewAllHabits()
+    public bool DeleteLoggedHabit(string habitName, int id)
     {
-        // SELECT * will retrieve all columns from the Habits table
-        // If no columns are specified, all columns are retrieved
-        using var command = new SqliteCommand("SELECT * FROM Habits", _connection);
-        using var reader = command.ExecuteReader();
-        Console.WriteLine("ID\tName\tQuantity\tUnit");
+        string selectQuery = $"SELECT COUNT(*) FROM habits WHERE name = '{habitName}';";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        int habitCount = Convert.ToInt32(selectCommand.ExecuteScalar());
+
+        if (habitCount == 0)
+        {
+            return false;
+        }
+
+        // Delete the log entry from the habit table
+        string deleteHabitQuery = $"DELETE FROM {habitName} WHERE id = {id};";
+        using var deleteHabitCommand = new SqliteCommand(deleteHabitQuery, _connection);
+        return deleteHabitCommand.ExecuteNonQuery() > 0;
+    }
+
+    public bool UpdateHabit(string oldHabitName, string oldUnit, string newHabitName = "", string newUnit = "")
+    {
+        if (newHabitName == "" && newUnit == "")
+        {
+            throw new ArgumentException("At least one of the new habit name or unit must be provided.");
+        }
+
+        string selectQuery = $"SELECT COUNT(*) FROM habits WHERE name = '{oldHabitName}';";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        int habitCount = Convert.ToInt32(selectCommand.ExecuteScalar());
+        if (habitCount == 0)
+        {
+            return false;
+        }
+
+        if (newHabitName == "")
+        {
+            newHabitName = oldHabitName;
+        }
+        else if (newUnit == "")
+        {
+            newUnit = oldUnit;
+        }
+
+        string updateHabitQuery = $"UPDATE habits SET name = '{newHabitName}', unit = '{newUnit}' WHERE name = '{oldHabitName}';";
+        using var updateHabitCommand = new SqliteCommand(updateHabitQuery, _connection);
+        updateHabitCommand.ExecuteNonQuery();
+        return true;
+    }
+
+    public List<(string habitName, string unit)> GetAllHabits()
+    {
+        var ret = new List<(string habitName, string unit)>();
+        string selectQuery = "SELECT * FROM habits;";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        using var reader = selectCommand.ExecuteReader();
         while (reader.Read())
         {
-            int id = reader.GetInt32(0);
-            string name = reader.GetString(1);
-            int quantity = reader.GetInt32(2);
-            string unit = reader.GetString(3);
-            Console.WriteLine($"{id}\t{name}\t{quantity}\t{unit}");
+            ret.Add((reader.GetString(0), reader.GetString(1)));
         }
+
+        return ret;
+    }
+
+    public Dictionary<(string habitName, string unit), List<(int id, int quantity, string timeStamp)>> GetAllHabitsAndLogs()
+    {
+        var ret = new Dictionary<(string habitName, string unit), List<(int id, int quantity, string timeStamp)>>();
+        string selectQuery = "SELECT * FROM habits;";
+        using var selectCommand = new SqliteCommand(selectQuery, _connection);
+        using var reader = selectCommand.ExecuteReader();
+        while (reader.Read())
+        {
+            string habitName = reader.GetString(0);
+            string unit = reader.GetString(1);
+            string selectHabitQuery = $"SELECT id, quantity, timestamp FROM {habitName};";
+            using var selectHabitCommand = new SqliteCommand(selectHabitQuery, _connection);
+            using var habitReader = selectHabitCommand.ExecuteReader();
+            var habitList = new List<(int id, int quantity, string timeStamp)>();
+            while (habitReader.Read())
+            {
+                habitList.Add((habitReader.GetInt32(0), habitReader.GetInt32(1), habitReader.GetString(2)));
+            }
+
+            ret.Add((habitName, unit), habitList);
+        }
+
+        return ret;
+    }
+
+    public List<(int id, int quantity, string timeStamp)>? GetHabit(string habitName, out string unit)
+    {
+        string selectHabitQuery = $"SELECT unit FROM habits WHERE name = '{habitName}';";
+        using var selectHabitCommand = new SqliteCommand(selectHabitQuery, _connection);
+        unit = selectHabitCommand.ExecuteScalar()?.ToString() ?? "";
+        if (unit == "")
+        {
+            return null;
+        }
+
+        selectHabitQuery = $"SELECT id, quantity, timestamp FROM {habitName};";
+        using var selectHabitCommand2 = new SqliteCommand(selectHabitQuery, _connection);
+        using var reader = selectHabitCommand2.ExecuteReader();
+        var habitList = new List<(int id, int quantity, string timeStamp)>();
+        while (reader.Read())
+        {
+            habitList.Add((reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2)));
+        }
+
+        return habitList;
     }
 
     public int ReportNumberOfTimes(int id)
     {
-        // The COUNT(*) function will return the number of rows that match the condition
-        // @Id is a placeholder for the actual value
-        using var command = new SqliteCommand("SELECT COUNT(*) FROM HabitLogs WHERE HabitId = @Id", _connection);
-        command.Parameters.AddWithValue("@Id", id);
-        int count = Convert.ToInt32(command.ExecuteScalar());
-        return count;
+        return 0;
     }
 
     public int ReportTotalQuantity(int id)
     {
-        // The SUM function will return the total of the Quantity column
-        // @Id is a placeholder for the actual value
-        using var command = new SqliteCommand("SELECT SUM(Quantity) FROM HabitLogs WHERE HabitId = @Id", _connection);
-        command.Parameters.AddWithValue("@Id", id);
-        object? result = command.ExecuteScalar();
-        int totalQuantity = result is DBNull ? 0 : Convert.ToInt32(result);
-        return totalQuantity;
+        return 0;
     }
 }
