@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace HabitTrackerConsoleApp;
 
@@ -20,8 +19,6 @@ internal class Program
             { "Update Habit", () => UpdateHabit(habitDatabase) },
             { "View All Habits", () => ViewAllHabits(habitDatabase) },
             { "View Habit", () => ViewHabit(habitDatabase) },
-            { "Report Number of Times", () => ReportNumberOfTimes(habitDatabase) },
-            { "Report Total Quantity", () => ReportTotalQuantity(habitDatabase) },
             { "Exit", () => Environment.Exit(0) },
         };
 
@@ -36,6 +33,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Adds a new habit to the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to add the habit to.</param>
     private static void AddNewHabit(HabitDatabase habitDatabase)
     {
         var habits = habitDatabase.GetAllHabits();
@@ -73,6 +74,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Logs a habit in the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to log the habit in.</param>
     private static void LogHabit(HabitDatabase habitDatabase)
     {
         var habits = habitDatabase.GetAllHabits();
@@ -108,6 +113,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Deletes a habit from the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to delete the habit from.</param>
     private static void DeleteHabit(HabitDatabase habitDatabase)
     {
         var habits = habitDatabase.GetAllHabits();
@@ -136,6 +145,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Deletes a logged habit from the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to delete the logged habit from.</param>
     private static void DeleteLoggedHabit(HabitDatabase habitDatabase)
     {
         var habitsAndLogs = habitDatabase.GetAllHabitsAndLogs();
@@ -175,6 +188,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Updates a habit in the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to update the habit in.</param>
     private static void UpdateHabit(HabitDatabase habitDatabase)
     {
         var habits = habitDatabase.GetAllHabits();
@@ -245,7 +262,7 @@ internal class Program
                     return;
                 }
 
-                var habitLog = habitLogs.Single(log => $"ID: {log.id}, Quantity: {log.quantity}, Timestamp: {log.timeStamp}" == habitLogString);
+                var (id, quantity, timeStamp) = habitLogs.Single(log => $"ID: {log.id}, Quantity: {log.quantity}, Timestamp: {log.timeStamp}" == habitLogString);
                 var newQuantity = AnsiConsole.Ask<int>($"Enter the new {unit} of {habitName} to log:");
                 if (newQuantity == 0)
                 {
@@ -253,7 +270,7 @@ internal class Program
                     return;
                 }
 
-                if (habitDatabase.UpdateLoggedHabit(habitName, habitLog.id, newQuantity))
+                if (habitDatabase.UpdateLoggedHabit(habitName, id, newQuantity))
                 {
                     AnsiConsole.MarkupLine("[bold]Log updated successfully![/]");
                 }
@@ -270,6 +287,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Views all habits in the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to view the habits from.</param>
     private static void ViewAllHabits(HabitDatabase habitDatabase)
     {
         var habitsAndLogs = habitDatabase.GetAllHabitsAndLogs();
@@ -287,15 +308,19 @@ internal class Program
             table.AddColumn("id");
             table.AddColumn(kvp.Key.unit);
             table.AddColumn("timestamp");
-            foreach (var entry in kvp.Value)
+            foreach (var (id, quantity, timeStamp) in kvp.Value)
             {
-                table.AddRow(entry.id.ToString(), entry.quantity.ToString(), entry.timeStamp);
+                table.AddRow(id.ToString(), quantity.ToString(), timeStamp);
             }
 
             AnsiConsole.Write(table);
         }
     }
 
+    /// <summary>
+    /// Views a specific habit in the database.
+    /// </summary>
+    /// <param name="habitDatabase">The database to view the habit from.</param>
     private static void ViewHabit(HabitDatabase habitDatabase)
     {
         var habits = habitDatabase.GetAllHabits();
@@ -326,21 +351,11 @@ internal class Program
         table.AddColumn("id");
         table.AddColumn(unit);
         table.AddColumn("timestamp");
-        foreach (var entry in habitLogs)
+        foreach (var (id, quantity, timeStamp) in habitLogs)
         {
-            table.AddRow(entry.id.ToString(), entry.quantity.ToString(), entry.timeStamp);
+            table.AddRow(id.ToString(), quantity.ToString(), timeStamp);
         }
 
         AnsiConsole.Write(table);
-    }
-
-    private static void ReportNumberOfTimes(HabitDatabase habitDatabase)
-    {
-        // Implement the logic for reporting the number of times here
-    }
-
-    private static void ReportTotalQuantity(HabitDatabase habitDatabase)
-    {
-        // Implement the logic for reporting the total quantity here
     }
 }
